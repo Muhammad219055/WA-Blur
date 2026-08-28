@@ -6,7 +6,7 @@ struct WhatsAppPrivacyApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarContentView(appState: appDelegate.appState)
+            MenuBarContentView(appState: appDelegate.appState, privacySettings: appDelegate.privacySettings)
         } label: {
             MenuBarIconView(appState: appDelegate.appState)
         }
