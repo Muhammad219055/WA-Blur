@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 final class PrivacyOverlayWindow: NSWindow {
-    init(frame: CGRect) {
+    init(frame: CGRect, settings: PrivacySettings, capture: WhatsAppWindowCapture) {
         super.init(
             contentRect: frame,
             styleMask: [.borderless],
@@ -50,6 +50,6 @@ final class PrivacyOverlayWindow: NSWindow {
         // other app is frontmost -- which is always, for us.
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
-        contentView = NSHostingView(rootView: PrivacyOverlayView())
+        contentView = NSHostingView(rootView: PrivacyContentRouter(settings: settings, capture: capture))
     }
 }

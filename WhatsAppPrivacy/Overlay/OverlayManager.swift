@@ -3,6 +3,13 @@ import AppKit
 @MainActor
 final class OverlayManager {
     private var window: PrivacyOverlayWindow?
+    private let settings: PrivacySettings
+    private let capture: WhatsAppWindowCapture
+
+    init(settings: PrivacySettings, capture: WhatsAppWindowCapture) {
+        self.settings = settings
+        self.capture = capture
+    }
 
     /// Ordering the window in once and then only fading `alphaValue` between
     /// 0 and 1 -- never `orderOut`/`orderFront` cycling it -- is what keeps
@@ -16,7 +23,7 @@ final class OverlayManager {
             }
             window.alphaValue = 1
         } else {
-            let newWindow = PrivacyOverlayWindow(frame: frame)
+            let newWindow = PrivacyOverlayWindow(frame: frame, settings: settings, capture: capture)
             newWindow.orderFrontRegardless()
             newWindow.alphaValue = 1
             window = newWindow
