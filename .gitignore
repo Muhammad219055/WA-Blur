@@ -1,5 +1,6 @@
-# XcodeGen-generated project (regenerate with `xcodegen generate`)
+# XcodeGen-generated project and Info.plist (regenerate with `xcodegen generate`)
 *.xcodeproj/
+WhatsAppPrivacy/Info.plist
 
 # Build artifacts
 DerivedData/
