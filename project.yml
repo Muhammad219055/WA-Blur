@@ -8,6 +8,18 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
+    # KNOWN LIMITATION (see design spec / acceptance results): ad-hoc ("-")
+    # signing means every rebuild changes the binary's signature, and TCC's
+    # Accessibility grant can get keyed to that changing signature -- System
+    # Settings shows the toggle on while the actual running process is
+    # silently denied. Confirmed live during Phase 1 development, and a
+    # `codesign identity: Apple Development` switch was attempted but hit
+    # keychain identity-matching failures under `xcodebuild` CLI builds that
+    # weren't worth blocking on. Workaround for now: after every rebuild,
+    # run `tccutil reset Accessibility com.wablur.WhatsAppPrivacy` and
+    # re-grant. A real end user building once (not rebuilding every few
+    # minutes during active development) shouldn't hit this at all -- it's
+    # specific to this dev loop, not the shipped behavior.
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
 targets:

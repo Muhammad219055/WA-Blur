@@ -6,7 +6,9 @@ final class OverlayManager {
 
     func showOverlay(at frame: CGRect) {
         if let window {
-            window.setFrame(frame, display: true)
+            if window.frame != frame {
+                window.setFrame(frame, display: true)
+            }
             window.orderFrontRegardless()
         } else {
             let newWindow = PrivacyOverlayWindow(frame: frame)

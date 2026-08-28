@@ -39,8 +39,24 @@ final class WhatsAppWindowTracker: ObservableObject {
     }
 
     private func refreshFrame() {
-        guard let pid = currentPID,
-              let axFrame = accessibilityManager.mainWindowFrame(forProcessIdentifier: pid),
+        guard let pid = currentPID else { return }
+
+        // Minimized is the one deliberate, confirmed reason to clear the
+        // frame -- checked explicitly and separately from the frame read
+        // below, so a transient AX read hiccup (e.g. WhatsApp briefly busy
+        // mid-UI-transition) can't be mistaken for "minimized" and blank
+        // the overlay out. An earlier version treated any nil frame read
+        // the same as minimized, which fixed the minimize case but then
+        // made the overlay flicker off during ordinary chat-switching.
+        guard !accessibilityManager.isMainWindowMinimized(forProcessIdentifier: pid) else {
+            frame = nil
+            return
+        }
+
+        // A transient read failure here intentionally keeps the last known
+        // good frame rather than clearing it -- see the minimized check
+        // above for the one case that does clear it.
+        guard let axFrame = accessibilityManager.mainWindowFrame(forProcessIdentifier: pid),
               let cocoaFrame = AXCoordinateConverter.cocoaFrame(fromAXFrame: axFrame) else {
             return
         }

@@ -73,6 +73,31 @@ final class AccessibilityManager: ObservableObject {
         return frame(of: window)
     }
 
+    /// Separate from `mainWindowFrame` deliberately: a minimized window
+    /// still reports valid (unchanged) position/size attributes in AX --
+    /// minimizing does not make the attribute reads fail. Callers use this
+    /// as the one deliberate reason to clear a tracked frame; a generic nil
+    /// from `mainWindowFrame` (a transient read hiccup) should not be
+    /// treated the same way, or the overlay flickers off during ordinary
+    /// WhatsApp UI transitions that briefly make AX attributes unavailable.
+    func isMainWindowMinimized(forProcessIdentifier pid: pid_t) -> Bool {
+        guard isTrusted else { return false }
+        let appElement = AXUIElementCreateApplication(pid)
+        guard let window = focusedWindow(of: appElement) ?? firstWindow(of: appElement) else {
+            return false
+        }
+        return isMinimized(window)
+    }
+
+    private func isMinimized(_ window: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window, kAXMinimizedAttribute as CFString, &value) == .success,
+              let minimized = value as? Bool else {
+            return false
+        }
+        return minimized
+    }
+
     func observeWindow(forProcessIdentifier pid: pid_t, onChange: @escaping () -> Void) -> AXWindowObservation? {
         guard isTrusted else { return nil }
 
