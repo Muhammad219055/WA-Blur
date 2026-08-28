@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager: GlobalHotkeyManager?
     private var currentWhatsAppPID: pid_t?
     private var activationObserver: NSObjectProtocol?
+    private var spaceChangeObserver: NSObjectProtocol?
     /// True while some other app's window is genuinely covering WhatsApp's
     /// window (see bindAppActivation) -- the overlay hides so that window
     /// isn't obstructed, distinct from isPrivacyEnabled/isWhatsAppRunning.
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindWindowFrame()
         bindPrivacyToggle()
         bindAppActivation()
+        bindSpaceChanges()
 
         accessibilityManager.startMonitoringTrustState()
         detector.startMonitoring()
@@ -48,6 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager?.unregister()
         if let activationObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+        }
+        if let spaceChangeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(spaceChangeObserver)
         }
         windowTracker.stopTracking()
         detector.stopMonitoring()
@@ -138,20 +143,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// A Space change can only be fixed by dropping any existing overlay
+    /// window and letting syncOverlay() create a fresh one while the new
+    /// Space is confirmed active (see OverlayManager.invalidateForSpaceChange) --
+    /// there's no API to move a window to a specific background Space
+    /// directly. Only bothers when WhatsApp is actually on-screen on the
+    /// Space that just became active; otherwise there's nothing to show.
+    private func bindSpaceChanges() {
+        spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, let waPID = self.currentWhatsAppPID else { return }
+            self.overlayManager.invalidateForSpaceChange()
+            // Same rationale as bindAppActivation's settle delay: this
+            // notification can fire before the Space transition (and any
+            // window-raise that triggered it, e.g. entering fullscreen)
+            // has fully settled, so reading the on-screen window list
+            // immediately can see a transitional, not-yet-final state.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                guard let self else { return }
+                if WindowStackingLookup.isWindowOnScreen(forProcessIdentifier: waPID) {
+                    self.syncOverlay()
+                }
+            }
+        }
+    }
+
     private func refreshSuppression(forFrontmostPID frontmostPID: pid_t?) {
         guard let waPID = currentWhatsAppPID else { return }
+
+        // If WhatsApp's own window isn't visible on the CURRENTLY ACTIVE
+        // Space at all -- e.g. the user just switched to an entirely
+        // different desktop -- there's nothing to protect here regardless
+        // of overlap. Bail out without touching suppression state or
+        // calling syncOverlay(): bindSpaceChanges already owns
+        // creating/destroying the overlay for a Space change, and this
+        // used to fall through to "couldn't determine bounds, default to
+        // not suppressed" -- which forced a fresh, visible overlay window
+        // into existence on whatever Space the user had just switched to.
+        // Confirmed live: that was the exact mechanism behind the overlay
+        // leaking onto an unrelated Space right after Notes had been
+        // suppressing it on WhatsApp's own Space.
+        guard let waFrame = WindowStackingLookup.mainWindow(forProcessIdentifier: waPID)?.frame else {
+            return
+        }
 
         let suppressed: Bool
         if frontmostPID == waPID || frontmostPID == nil {
             suppressed = false
-        } else if let waFrame = WindowStackingLookup.mainWindow(forProcessIdentifier: waPID)?.frame,
-                  let otherFrame = WindowStackingLookup.mainWindow(forProcessIdentifier: frontmostPID!)?.frame {
+        } else if let otherFrame = WindowStackingLookup.mainWindow(forProcessIdentifier: frontmostPID!)?.frame {
             suppressed = waFrame.intersects(otherFrame)
         } else {
-            // Couldn't determine the other window's bounds -- default to
+            // Couldn't determine the *other* window's bounds -- default to
             // not suppressing, since understating an actual overlap only
             // risks a momentarily-obstructed window, while overstating one
-            // would silently drop privacy protection.
+            // would silently drop privacy protection. Distinct from the
+            // guard above: this is about the other app's window, not
+            // WhatsApp's own, which is already confirmed present above.
             suppressed = false
         }
 

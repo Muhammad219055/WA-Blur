@@ -31,19 +31,19 @@ final class PrivacyOverlayWindow: NSWindow {
         // handled instead in AppDelegate by hiding the overlay outright
         // when a genuinely overlapping window becomes frontmost.
         level = .floating
-        // Deliberately NOT .canJoinAllSpaces: that flag makes a window a
-        // permanent fixture on every Space simultaneously (like a desktop
-        // wallpaper or the Dock), not something that "follows" the app it's
-        // tracking. With it set, this overlay was painting itself over
-        // unrelated desktops and other apps' fullscreen Spaces whenever the
-        // user switched away from WhatsApp's Space -- exactly backwards for
-        // a privacy tool. Leaving collectionBehavior at its default keeps
-        // this window confined to whichever Space it's currently on, same
-        // as any ordinary window. Following WhatsApp across a Space change
-        // it makes on its own, and native fullscreen support, are explicit
-        // Phase 1 non-goals (see the design spec) and remain a known
-        // limitation until a later phase adds per-Space window handling.
-        collectionBehavior = [.ignoresCycle]
+        // .fullScreenAuxiliary (new in Phase 2): by default, a Space
+        // currently showing another app's native-fullscreen window refuses
+        // ordinary windows from other apps entirely -- without this flag, a
+        // freshly-created overlay window would get bounced back to the
+        // regular desktop instead of appearing on WhatsApp's fullscreen
+        // Space. Still deliberately NOT .canJoinAllSpaces (see below): that
+        // flag makes a window a permanent fixture on *every* Space
+        // simultaneously, which is what caused the original cross-desktop
+        // leak Phase 1 shipped with. .fullScreenAuxiliary only grants
+        // entry to a fullscreen Space that the app is legitimately
+        // following into via the Space-change handling in AppDelegate; it
+        // does not make the window omnipresent.
+        collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
         // Explicit, not relying on the default: this window belongs to an
         // accessory-policy app that is itself never "the active app," so if
         // this defaulted to true the overlay could vanish whenever ANY

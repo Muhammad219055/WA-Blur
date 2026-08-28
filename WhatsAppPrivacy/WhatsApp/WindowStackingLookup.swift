@@ -43,4 +43,13 @@ enum WindowStackingLookup {
         }
         return WindowInfo(windowNumber: windowNumber, frame: best.frame)
     }
+
+    /// True only if `pid` has a window CGWindowListCopyWindowInfo reports as
+    /// on-screen *right now* -- which, critically, is Space-aware: a window
+    /// on a Space that isn't currently active does not appear here. This is
+    /// the ground truth this task uses to decide whether WhatsApp is visible
+    /// on whichever Space just became active.
+    static func isWindowOnScreen(forProcessIdentifier pid: pid_t) -> Bool {
+        mainWindow(forProcessIdentifier: pid) != nil
+    }
 }
