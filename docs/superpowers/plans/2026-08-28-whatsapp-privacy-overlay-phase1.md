@@ -117,6 +117,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.wablur.WhatsAppPrivacyTests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   WhatsAppPrivacy:
     build:
