@@ -1351,3 +1351,55 @@ git worktree remove ../WhatsAppPrivacy-task5 2>/dev/null
 git worktree remove ../WhatsAppPrivacy-task6 2>/dev/null
 git branch -d task/3-whatsapp-detection task/4-accessibility-window-tracking task/5-overlay task/6-global-hotkey
 ```
+
+## Phase 1 Acceptance Results
+
+Verified against the running app with the real WhatsApp desktop app, WhatsApp
+bundle id `net.whatsapp.WhatsApp`, on this machine (macOS 26.5.2, Apple
+Silicon). "Verified manually" below means re-confirmed live during this pass
+(screenshots, synthetic clicks via `cliclick`, AX-driven window manipulation
+via `osascript`), not just observed once earlier in development.
+
+- [x] App launches as a menu-bar-only application — **Verified manually**: menu bar eye icon present, confirmed across many launches.
+- [x] No Dock icon is shown — **Verified manually**: confirmed alongside the above every time.
+- [x] WhatsApp is detected when it is already running — **Verified manually**: `WhatsAppDetector.refreshFromCurrentlyRunningApps()` path exercised repeatedly across relaunches with WhatsApp already open.
+- [x] WhatsApp is detected when it is launched after our app — **Verified automatically only** (unit-tested matching logic in `WhatsAppIdentityTests`); not re-exercised live with WhatsApp closed-then-launched in this final pass. **Not yet verified** end-to-end live.
+- [x] WhatsApp termination is detected — **Verified manually** earlier in development (WhatsApp quit via `osascript`, menu reverted to "Waiting for WhatsApp…", overlay destroyed); not re-run in this exact final build. Logic unchanged since.
+- [x] Accessibility permission state is correctly detected — **Verified manually**, with a documented caveat: **Known limitation** — ad-hoc code signing does not reliably preserve the TCC grant across rebuilds on this macOS version (confirmed live, repeatedly); a `tccutil reset` + re-grant is needed after each dev rebuild. Does not affect a real end user who isn't rebuilding constantly. A certificate-based signing fix was attempted and did not resolve cleanly under CLI builds — carried into Phase 2 as a real task, not just a note.
+- [x] App provides appropriate onboarding when Accessibility permission is missing — **Verified manually**: "Accessibility access needed…" text and "Open Accessibility Settings…" button shown and functional, confirmed across multiple permission resets this session.
+- [x] WhatsApp's main window is identified — **Verified manually**: correct frame read via AX repeatedly, cross-checked against `osascript`-reported window geometry.
+- [x] Overlay matches the WhatsApp window frame — **Verified manually**: pixel-level alignment confirmed via cropped screenshots at the exact AX-reported rectangle.
+- [x] Overlay follows WhatsApp when the window moves — **Verified manually**: window moved via AX, overlay tracked correctly.
+- [x] Overlay follows WhatsApp when the window resizes — **Verified manually**: window resized via AX to 900×600, overlay matched.
+- [x] Overlay disappears when WhatsApp closes — **Verified manually** earlier in development (see termination item above); not re-run in this exact final build.
+- [x] Overlay does not intercept normal WhatsApp mouse interaction — **Verified manually**: a real synthetic OS-level click (`cliclick`, not simulated in-process) through the overlay successfully opened a chat in WhatsApp.
+- [x] Overlay works correctly with Retina scaling — **Verified manually**: text and tint render crisply with no blur artifacts across every screenshot this session.
+- [ ] Overlay works correctly when WhatsApp is moved between displays — **Not yet verified**: no second display was available in this environment.
+- [x] ⌘⇧B works as a global shortcut — **Verified manually**: toggled privacy on/off via the real Carbon-registered hotkey.
+- [x] ⌘⇧B toggles privacy state — **Verified manually**, same test.
+- [x] Overlay visibility follows privacy state — **Verified manually** throughout every test in this session.
+- [x] No unnecessary high-frequency polling occurs — **Verified by design**: the only timers are the 1s `DispatchSourceTimer` frame safety-net (with 400ms leeway) and the 2s Accessibility-trust `Timer`; both are coalescing and only run while relevant. An earlier iteration added a 0.5s continuous z-order reassertion timer to fight window-stacking flicker — that approach was replaced with the `.floating`-level + event-driven overlap-suppression design specifically to avoid needing continuous polling at all.
+- [ ] CPU usage remains reasonable while idle — **Not yet verified** in this final build specifically; verified in an earlier iteration of the safety-net timer design, not re-measured after the last several changes. Should be re-checked in Phase 2's first task.
+- [x] App handles WhatsApp window disappearance without crashing — **Verified manually**: dozens of minimize/restore, resize, move, multi-instance, and permission-reset cycles this session, zero crashes observed.
+- [x] AX failures are handled gracefully — **Verified manually** (by construction and by not crashing under heavy live testing): all AX reads are guarded, no force-unwraps outside API-contract-justified ones, a failed read keeps the last-known-good frame rather than crashing or corrupting state.
+
+### Known limitations found during live testing (beyond what the design spec already scoped out)
+
+1. **Cross-Space reattachment bug (major, carried into Phase 2).** The
+   overlay is correctly hidden when a same-Space window overlaps WhatsApp
+   (`WindowStackingLookup`-based suppression works as designed). But when the
+   overlay is hidden (`orderOut`) and later shown again (`orderFrontRegardless`)
+   while the user is now on a *different* Space than WhatsApp's, AppKit
+   appears to attach the window to whichever Space is active at the moment
+   of that `orderFront` call, not to WhatsApp's original Space — so the
+   overlay can reappear on the wrong desktop entirely. This is a deeper
+   constraint of AppKit's public Spaces API (there is no call to explicitly
+   target "WhatsApp's Space" when re-showing an already-created window) and
+   needs real design, not another quick patch. Diagnosed but not fixed in
+   Phase 1.
+2. **Native macOS fullscreen is not supported** (explicit Phase 1 non-goal,
+   confirmed live): WhatsApp entering fullscreen creates a new Space, and
+   the overlay does not follow — it stays on the original desktop until
+   privacy is toggled off and on again.
+3. **Ad-hoc signing does not reliably preserve the Accessibility TCC grant
+   across rebuilds** on this macOS version — see the acceptance item above.
