@@ -1,0 +1,51 @@
+name: WhatsAppPrivacy
+options:
+  bundleIdPrefix: com.wablur
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+targets:
+  WhatsAppPrivacy:
+    type: application
+    platform: macOS
+    sources:
+      - path: WhatsAppPrivacy
+    info:
+      path: WhatsAppPrivacy/Info.plist
+      properties:
+        CFBundleName: WhatsApp Privacy
+        CFBundleDisplayName: WhatsApp Privacy
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wablur.WhatsAppPrivacy
+  WhatsAppPrivacyTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: WhatsAppPrivacyTests
+    dependencies:
+      - target: WhatsAppPrivacy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wablur.WhatsAppPrivacyTests
+schemes:
+  WhatsAppPrivacy:
+    build:
+      targets:
+        WhatsAppPrivacy: all
+        WhatsAppPrivacyTests: [test]
+    test:
+      targets:
+        - WhatsAppPrivacyTests
+    run:
+      config: Debug
