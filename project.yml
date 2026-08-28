@@ -8,19 +8,36 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    # KNOWN LIMITATION (see design spec / acceptance results): ad-hoc ("-")
-    # signing means every rebuild changes the binary's signature, and TCC's
-    # Accessibility grant can get keyed to that changing signature -- System
-    # Settings shows the toggle on while the actual running process is
-    # silently denied. Confirmed live during Phase 1 development, and a
-    # `codesign identity: Apple Development` switch was attempted but hit
-    # keychain identity-matching failures under `xcodebuild` CLI builds that
-    # weren't worth blocking on. Workaround for now: after every rebuild,
-    # run `tccutil reset Accessibility com.wablur.WhatsAppPrivacy` and
-    # re-grant. A real end user building once (not rebuilding every few
-    # minutes during active development) shouldn't hit this at all -- it's
-    # specific to this dev loop, not the shipped behavior.
-    CODE_SIGN_IDENTITY: "-"
+    # RESOLVED (was a KNOWN LIMITATION): ad-hoc ("-") signing changes the
+    # binary's signature on every rebuild, and TCC's Accessibility grant got
+    # keyed to that changing signature -- System Settings showed the toggle
+    # on while the actual running process was silently denied. Confirmed
+    # live during development. A real Apple Development certificate was
+    # tried next, but automatic/manual signing with it failed under
+    # `xcodebuild` CLI builds ("no certificate ... found") because the
+    # associated Apple ID isn't added to this machine's Xcode Accounts, so
+    # Xcode can't resolve a matching provisioning profile non-interactively
+    # -- codesign itself could use the certificate fine, only Xcode's
+    # provisioning resolution couldn't. The fix: a locally-generated,
+    # self-signed code-signing certificate ("WhatsAppPrivacy Local Dev"),
+    # imported into the login keychain and trusted for the codeSign policy.
+    # It has no Team ID and needs no provisioning profile (this app has zero
+    # entitlements/capabilities that would require one), and unlike ad-hoc
+    # signing, the certificate's identity is fixed -- rebuilding the binary
+    # never changes it, so the TCC grant now survives rebuilds. Setup (not
+    # needed again on this machine, but needed on a fresh machine/keychain):
+    #   openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem \
+    #     -days 3650 -nodes -subj "/CN=WhatsAppPrivacy Local Dev" \
+    #     -addext "keyUsage=critical,digitalSignature" \
+    #     -addext "extendedKeyUsage=critical,codeSigning"
+    #   openssl pkcs12 -export -out cert.p12 -inkey key.pem -in cert.pem \
+    #     -passout pass:temp -legacy   # -legacy: security's PKCS12 parser
+    #     # needs the older encryption OpenSSL 3.x no longer defaults to.
+    #   security import cert.p12 -k ~/Library/Keychains/login.keychain-db \
+    #     -P temp -T /usr/bin/codesign -A
+    #   security add-trusted-cert -p codeSign \
+    #     -k ~/Library/Keychains/login.keychain-db cert.pem
+    CODE_SIGN_IDENTITY: "WhatsAppPrivacy Local Dev"
     CODE_SIGN_STYLE: Manual
 targets:
   WhatsAppPrivacy:
