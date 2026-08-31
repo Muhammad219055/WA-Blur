@@ -3,15 +3,20 @@ import SwiftUI
 struct PrivacyContentRouter: View {
     @ObservedObject var settings: PrivacySettings
     @ObservedObject var capture: WhatsAppWindowCapture
+    @ObservedObject var revealTracker: OverlayRevealTracker
 
     var body: some View {
-        switch settings.renderStyle {
-        case .blur:
-            BlurOverlayView(intensity: settings.intensity)
-        case .pixelate:
-            PixelateOverlayView(intensity: settings.intensity, capture: capture)
-        case .redact:
-            RedactOverlayView(intensity: settings.intensity)
+        Group {
+            switch settings.renderStyle {
+            case .blur:
+                BlurOverlayView(intensity: settings.intensity)
+            case .pixelate:
+                PixelateOverlayView(intensity: settings.intensity, capture: capture)
+            case .redact:
+                RedactOverlayView(intensity: settings.intensity)
+            }
         }
+        .opacity(revealTracker.isPeeking ? 0 : 1)
+        .animation(.easeInOut(duration: 0.15), value: revealTracker.isPeeking)
     }
 }

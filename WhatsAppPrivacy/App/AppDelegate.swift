@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindSpaceChanges()
         bindPrivacyStyle()
         bindScreenRecordingPermission()
+        bindRegionScope()
 
         accessibilityManager.startMonitoringTrustState()
         screenRecordingPermission.startMonitoring()
@@ -161,6 +162,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         Task { await self.windowCapture.startCapture(forProcessIdentifier: pid) }
                     }
                 }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindRegionScope() {
+        privacySettings.$regionScope
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.syncOverlay()
             }
             .store(in: &cancellables)
     }
