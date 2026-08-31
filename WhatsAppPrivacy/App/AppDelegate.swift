@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     let privacySettings = PrivacySettings()
     let screenRecordingPermission = ScreenRecordingPermissionManager()
+    let launchAtLogin = LaunchAtLoginManager()
 
     private let accessibilityManager = AccessibilityManager()
     private lazy var windowTracker = WhatsAppWindowTracker(accessibilityManager: accessibilityManager)
