@@ -5,10 +5,6 @@ enum PrivacyRegionCalculator {
     static let defaultSidebarRatio: CGFloat = 0.35
 
     /// Computes the sub-frame inside a Cocoa-coordinate window frame for a given region scope.
-    /// In Cocoa coordinates:
-    /// - (minX, minY) is the bottom-left corner of the window.
-    /// - sidebar occupies the leftmost horizontal slice: [minX ..< minX + sidebarWidth]
-    /// - chat area occupies the remaining horizontal slice: [minX + sidebarWidth ..< maxX]
     static func regionFrame(
         for windowFrame: CGRect,
         scope: PrivacyRegionScope,
@@ -39,5 +35,117 @@ enum PrivacyRegionCalculator {
                 height: windowFrame.height
             )
         }
+    }
+
+    /// Computes discrete granular sub-frame slices (in Cocoa screen coordinates)
+    /// based on the enabled privacy filter options and dynamic sidebar width.
+    static func granularSlices(
+        for windowFrame: CGRect,
+        options: PrivacyFilterOptions,
+        sidebarWidth: CGFloat? = nil
+    ) -> [CGRect] {
+        guard !windowFrame.isEmpty && !windowFrame.isNull else { return [] }
+
+        if options.isEverythingBlurred {
+            return [windowFrame]
+        }
+
+        let actualSidebarWidth = max(min(sidebarWidth ?? (windowFrame.width * defaultSidebarRatio), windowFrame.width), 0)
+        let chatWidth = max(windowFrame.width - actualSidebarWidth, 0)
+        let chatOriginX = windowFrame.minX + actualSidebarWidth
+
+        var slices: [CGRect] = []
+
+        // MARK: - Sidebar Granular Slices
+        if options.isChatListFullyBlurred {
+            slices.append(CGRect(
+                x: windowFrame.minX,
+                y: windowFrame.minY,
+                width: actualSidebarWidth,
+                height: windowFrame.height
+            ))
+        } else {
+            // Profile pictures / avatars in sidebar
+            if options.blurProfilePictures {
+                slices.append(CGRect(
+                    x: windowFrame.minX + 12,
+                    y: windowFrame.minY,
+                    width: 52,
+                    height: windowFrame.height
+                ))
+            }
+            // Chat list titles & last messages
+            if options.blurChatNames && options.blurLastMessages {
+                slices.append(CGRect(
+                    x: windowFrame.minX + 68,
+                    y: windowFrame.minY,
+                    width: max(actualSidebarWidth - 75, 0),
+                    height: windowFrame.height
+                ))
+            } else if options.blurChatNames {
+                slices.append(CGRect(
+                    x: windowFrame.minX + 68,
+                    y: windowFrame.minY,
+                    width: max(actualSidebarWidth - 140, 0),
+                    height: windowFrame.height
+                ))
+            } else if options.blurLastMessages {
+                slices.append(CGRect(
+                    x: windowFrame.minX + 68,
+                    y: windowFrame.minY,
+                    width: max(actualSidebarWidth - 85, 0),
+                    height: windowFrame.height
+                ))
+            }
+        }
+
+        // MARK: - Active Conversation Granular Slices
+        if options.isConversationFullyBlurred {
+            slices.append(CGRect(
+                x: chatOriginX,
+                y: windowFrame.minY,
+                width: chatWidth,
+                height: windowFrame.height
+            ))
+        } else {
+            let headerHeight: CGFloat = 65
+            let inputHeight: CGFloat = 60
+
+            // Conversation top header (contact name / avatar / phone)
+            if options.blurConversationHeader {
+                slices.append(CGRect(
+                    x: chatOriginX,
+                    y: windowFrame.maxY - headerHeight,
+                    width: chatWidth,
+                    height: headerHeight
+                ))
+            }
+
+            // Message composition text input bar at bottom
+            if options.blurTextInput {
+                slices.append(CGRect(
+                    x: chatOriginX,
+                    y: windowFrame.minY,
+                    width: chatWidth,
+                    height: inputHeight
+                ))
+            }
+
+            // Conversation message bubbles & history (middle area)
+            if options.blurConversationMessages || options.blurConversationMedia {
+                let bottomOffset = options.blurTextInput ? inputHeight : 0
+                let topOffset = options.blurConversationHeader ? headerHeight : 0
+                let middleHeight = max(windowFrame.height - bottomOffset - topOffset, 0)
+
+                slices.append(CGRect(
+                    x: chatOriginX,
+                    y: windowFrame.minY + bottomOffset,
+                    width: chatWidth,
+                    height: middleHeight
+                ))
+            }
+        }
+
+        return slices
     }
 }

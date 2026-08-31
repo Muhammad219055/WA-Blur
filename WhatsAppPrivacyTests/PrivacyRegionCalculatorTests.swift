@@ -40,4 +40,42 @@ final class PrivacyRegionCalculatorTests: XCTestCase {
         XCTAssertEqual(sidebar.union(chat), baseFrame)
         XCTAssertEqual(sidebar.width + chat.width, baseFrame.width)
     }
+
+    func test_granularSlices_everything_returnsSingleFullWindowSlice() {
+        let slices = PrivacyRegionCalculator.granularSlices(for: baseFrame, options: .everything, sidebarWidth: 350)
+        XCTAssertEqual(slices.count, 1)
+        XCTAssertEqual(slices.first, baseFrame)
+    }
+
+    func test_granularSlices_chatListOnly_returnsSidebarSlice() {
+        let slices = PrivacyRegionCalculator.granularSlices(for: baseFrame, options: .chatListOnly, sidebarWidth: 350)
+        XCTAssertEqual(slices.count, 1)
+        XCTAssertEqual(slices.first?.width, 350)
+        XCTAssertEqual(slices.first?.origin.x, 100)
+    }
+
+    func test_granularSlices_individualToggles_returnsSpecificSubframes() {
+        var options = PrivacyFilterOptions()
+        options.blurChatNames = false
+        options.blurLastMessages = false
+        options.blurProfilePictures = true // avatar column
+        options.blurConversationHeader = true // top header
+        options.blurConversationMessages = false
+        options.blurConversationMedia = false
+        options.blurTextInput = true // bottom input
+
+        let slices = PrivacyRegionCalculator.granularSlices(for: baseFrame, options: options, sidebarWidth: 350)
+        XCTAssertEqual(slices.count, 3) // avatar column + header + text input
+
+        // Header slice should be at the top of the chat panel
+        let headerSlice = slices.first { $0.height == 65 }
+        XCTAssertNotNil(headerSlice)
+        XCTAssertEqual(headerSlice?.origin.x, 450) // 100 + 350
+
+        // Input slice should be at the bottom of the chat panel
+        let inputSlice = slices.first { $0.height == 60 }
+        XCTAssertNotNil(inputSlice)
+        XCTAssertEqual(inputSlice?.origin.x, 450)
+        XCTAssertEqual(inputSlice?.origin.y, 100)
+    }
 }
