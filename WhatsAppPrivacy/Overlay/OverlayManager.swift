@@ -17,26 +17,31 @@ final class OverlayManager {
     /// this window pinned to the Space it was created on. `ignoresMouseEvents`
     /// is already true, so an alpha-0 window still doesn't intercept clicks;
     /// it just isn't visible.
-    func showOverlay(at windowFrame: CGRect) {
-        let regionFrame = PrivacyRegionCalculator.regionFrame(for: windowFrame, scope: settings.regionScope)
-
+    func showOverlay(at windowFrame: CGRect, sidebarWidth: CGFloat? = nil) {
         if let window {
-            if window.frame != regionFrame {
-                window.setFrame(regionFrame, display: true)
+            if window.frame != windowFrame {
+                window.setFrame(windowFrame, display: true)
             }
+            window.updateContent(
+                frame: windowFrame,
+                settings: settings,
+                revealTracker: revealTracker,
+                sidebarWidth: sidebarWidth
+            )
             window.alphaValue = 1
         } else {
             let newWindow = PrivacyOverlayWindow(
-                frame: regionFrame,
+                frame: windowFrame,
                 settings: settings,
-                revealTracker: revealTracker
+                revealTracker: revealTracker,
+                sidebarWidth: sidebarWidth
             )
             newWindow.orderFrontRegardless()
             newWindow.alphaValue = 1
             window = newWindow
         }
 
-        revealTracker.updateOverlayFrame(regionFrame)
+        revealTracker.updateOverlayFrame(windowFrame)
     }
 
     func hideOverlay() {

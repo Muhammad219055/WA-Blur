@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 final class PrivacyOverlayWindow: NSWindow {
-    init(frame: CGRect, settings: PrivacySettings, revealTracker: OverlayRevealTracker) {
+    init(frame: CGRect, settings: PrivacySettings, revealTracker: OverlayRevealTracker, sidebarWidth: CGFloat? = nil) {
         super.init(
             contentRect: frame,
             styleMask: [.borderless],
@@ -50,6 +50,20 @@ final class PrivacyOverlayWindow: NSWindow {
         // other app is frontmost -- which is always, for us.
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
-        contentView = NSHostingView(rootView: PrivacyContentRouter(settings: settings, revealTracker: revealTracker))
+        contentView = NSHostingView(rootView: PrivacyContentRouter(
+            settings: settings,
+            revealTracker: revealTracker,
+            windowFrame: frame,
+            sidebarWidth: sidebarWidth
+        ))
+    }
+
+    func updateContent(frame: CGRect, settings: PrivacySettings, revealTracker: OverlayRevealTracker, sidebarWidth: CGFloat?) {
+        contentView = NSHostingView(rootView: PrivacyContentRouter(
+            settings: settings,
+            revealTracker: revealTracker,
+            windowFrame: frame,
+            sidebarWidth: sidebarWidth
+        ))
     }
 }

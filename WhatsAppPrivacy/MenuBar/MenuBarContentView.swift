@@ -17,7 +17,7 @@ struct MenuBarContentView: View {
                 }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
 
-                Menu("Region") {
+                Menu("Presets") {
                     ForEach(PrivacyRegionScope.allCases, id: \.self) { scope in
                         Button {
                             privacySettings.regionScope = scope
@@ -27,6 +27,35 @@ struct MenuBarContentView: View {
                             } else {
                                 Text(scope.menuTitle)
                             }
+                        }
+                    }
+                }
+
+                Menu("Granular Filters") {
+                    Section("Chat List") {
+                        filterToggle(title: "Blur Names", isOn: privacySettings.filterOptions.blurChatNames) {
+                            privacySettings.filterOptions.blurChatNames.toggle()
+                        }
+                        filterToggle(title: "Blur Last Message", isOn: privacySettings.filterOptions.blurLastMessages) {
+                            privacySettings.filterOptions.blurLastMessages.toggle()
+                        }
+                        filterToggle(title: "Blur Profile Pictures", isOn: privacySettings.filterOptions.blurProfilePictures) {
+                            privacySettings.filterOptions.blurProfilePictures.toggle()
+                        }
+                    }
+                    Divider()
+                    Section("Active Conversation") {
+                        filterToggle(title: "Blur Messages", isOn: privacySettings.filterOptions.blurConversationMessages) {
+                            privacySettings.filterOptions.blurConversationMessages.toggle()
+                        }
+                        filterToggle(title: "Blur Media", isOn: privacySettings.filterOptions.blurConversationMedia) {
+                            privacySettings.filterOptions.blurConversationMedia.toggle()
+                        }
+                        filterToggle(title: "Blur Header & Contact", isOn: privacySettings.filterOptions.blurConversationHeader) {
+                            privacySettings.filterOptions.blurConversationHeader.toggle()
+                        }
+                        filterToggle(title: "Blur Text Input", isOn: privacySettings.filterOptions.blurTextInput) {
+                            privacySettings.filterOptions.blurTextInput.toggle()
                         }
                     }
                 }
@@ -104,7 +133,18 @@ struct MenuBarContentView: View {
         } else if !appState.isWhatsAppRunning {
             Text("Waiting for WhatsApp…")
         } else {
-            Text("Privacy: \(appState.isPrivacyEnabled ? "ON" : "OFF") (\(privacySettings.regionScope.menuTitle))")
+            Text("Privacy: \(appState.isPrivacyEnabled ? "ON" : "OFF")")
+        }
+    }
+
+    @ViewBuilder
+    private func filterToggle(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            if isOn {
+                Label(title, systemImage: "checkmark")
+            } else {
+                Text(title)
+            }
         }
     }
 

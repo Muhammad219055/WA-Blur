@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindSpaceChanges()
         bindPrivacyStyle()
         bindRegionScope()
+        bindFilterOptions()
 
         accessibilityManager.startMonitoringTrustState()
         detector.startMonitoring()
@@ -128,6 +129,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func bindRegionScope() {
         privacySettings.$regionScope
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.syncOverlay()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindFilterOptions() {
+        privacySettings.$filterOptions
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.syncOverlay()
@@ -242,6 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             overlayManager.hideOverlay()
             return
         }
-        overlayManager.showOverlay(at: frame)
+        let detectedSidebarWidth = currentWhatsAppPID.flatMap(WhatsAppSplitDetector.detectSidebarWidth)
+        overlayManager.showOverlay(at: frame, sidebarWidth: detectedSidebarWidth)
     }
 }
