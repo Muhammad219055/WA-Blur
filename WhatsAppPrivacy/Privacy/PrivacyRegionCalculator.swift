@@ -3,6 +3,9 @@ import CoreGraphics
 enum PrivacyRegionCalculator {
     /// Default ratio of the chat list sidebar width relative to the overall window width
     static let defaultSidebarRatio: CGFloat = 0.35
+    static let chatRowHeight: CGFloat = 72.0
+    static let navRailWidth: CGFloat = 60.0
+    static let sidebarHeaderHeight: CGFloat = 108.0
 
     /// Computes the sub-frame inside a Cocoa-coordinate window frame for a given region scope.
     static func regionFrame(
@@ -69,58 +72,49 @@ enum PrivacyRegionCalculator {
                 height: windowFrame.height
             ))
         } else {
-            // Profile pictures / avatars in sidebar (discrete element boxes if available)
-            if options.blurProfilePictures {
-                if let avatars = scannedElements?.chatAvatarFrames, !avatars.isEmpty {
-                    slices.append(contentsOf: avatars)
-                } else {
+            // Determine all visible chat row Y coordinates
+            let chatListTop = windowFrame.maxY - sidebarHeaderHeight
+            var rowTop = chatListTop
+
+            let textX = windowFrame.minX + navRailWidth + 64 // Right after avatar
+            let nameWidth = max(actualSidebarWidth - (navRailWidth + 64 + 75), 100)
+            let previewWidth = max(actualSidebarWidth - (navRailWidth + 64 + 40), 120)
+            let avatarX = windowFrame.minX + navRailWidth + 8
+
+            while rowTop > windowFrame.minY + 20 {
+                let rowBottom = max(rowTop - chatRowHeight, windowFrame.minY)
+
+                // 1. Discrete Avatar Circle for each chat row
+                if options.blurProfilePictures {
                     slices.append(CGRect(
-                        x: windowFrame.minX + 12,
-                        y: windowFrame.minY,
-                        width: 52,
-                        height: windowFrame.height
+                        x: avatarX,
+                        y: rowTop - 58,
+                        width: 48,
+                        height: 48
                     ))
                 }
-            }
 
-            // Chat list names (discrete text boxes if available)
-            if options.blurChatNames {
-                if let names = scannedElements?.chatNameFrames, !names.isEmpty {
-                    slices.append(contentsOf: names)
-                } else if !options.blurLastMessages {
+                // 2. Discrete Contact Name Badge for each chat row
+                if options.blurChatNames {
                     slices.append(CGRect(
-                        x: windowFrame.minX + 68,
-                        y: windowFrame.minY,
-                        width: max(actualSidebarWidth - 140, 0),
-                        height: windowFrame.height
+                        x: textX,
+                        y: rowTop - 30,
+                        width: nameWidth,
+                        height: 18
                     ))
                 }
-            }
 
-            // Chat list last message previews (discrete text boxes if available)
-            if options.blurLastMessages {
-                if let previews = scannedElements?.chatLastMessageFrames, !previews.isEmpty {
-                    slices.append(contentsOf: previews)
-                } else if !options.blurChatNames {
+                // 3. Discrete Last Message Preview for each chat row
+                if options.blurLastMessages {
                     slices.append(CGRect(
-                        x: windowFrame.minX + 68,
-                        y: windowFrame.minY,
-                        width: max(actualSidebarWidth - 85, 0),
-                        height: windowFrame.height
+                        x: textX,
+                        y: rowTop - 54,
+                        width: previewWidth,
+                        height: 16
                     ))
                 }
-            }
 
-            // Combined name + last message preview column fallback
-            if options.blurChatNames && options.blurLastMessages &&
-               (scannedElements?.chatNameFrames.isEmpty ?? true) &&
-               (scannedElements?.chatLastMessageFrames.isEmpty ?? true) {
-                slices.append(CGRect(
-                    x: windowFrame.minX + 68,
-                    y: windowFrame.minY,
-                    width: max(actualSidebarWidth - 75, 0),
-                    height: windowFrame.height
-                ))
+                rowTop -= chatRowHeight
             }
         }
 
@@ -133,35 +127,27 @@ enum PrivacyRegionCalculator {
                 height: windowFrame.height
             ))
         } else {
-            let headerHeight: CGFloat = 65
+            let headerHeight: CGFloat = 60
             let inputHeight: CGFloat = 60
 
             // Conversation top header (contact name / avatar / phone)
             if options.blurConversationHeader {
-                if let header = scannedElements?.headerFrame {
-                    slices.append(header)
-                } else {
-                    slices.append(CGRect(
-                        x: chatOriginX,
-                        y: windowFrame.maxY - headerHeight,
-                        width: chatWidth,
-                        height: headerHeight
-                    ))
-                }
+                slices.append(CGRect(
+                    x: chatOriginX,
+                    y: windowFrame.maxY - headerHeight,
+                    width: chatWidth,
+                    height: headerHeight
+                ))
             }
 
             // Message composition text input bar at bottom
             if options.blurTextInput {
-                if let input = scannedElements?.inputBarFrame {
-                    slices.append(input)
-                } else {
-                    slices.append(CGRect(
-                        x: chatOriginX,
-                        y: windowFrame.minY,
-                        width: chatWidth,
-                        height: inputHeight
-                    ))
-                }
+                slices.append(CGRect(
+                    x: chatOriginX,
+                    y: windowFrame.minY,
+                    width: chatWidth,
+                    height: inputHeight
+                ))
             }
 
             // Discrete individual message bubbles in chat history
@@ -169,16 +155,27 @@ enum PrivacyRegionCalculator {
                 if let bubbles = scannedElements?.messageBubbleFrames, !bubbles.isEmpty {
                     slices.append(contentsOf: bubbles)
                 } else {
-                    let bottomOffset = options.blurTextInput ? inputHeight : 0
-                    let topOffset = options.blurConversationHeader ? headerHeight : 0
-                    let middleHeight = max(windowFrame.height - bottomOffset - topOffset, 0)
+                    // Staggered discrete message bubble cards in the conversation view
+                    let bottomY = windowFrame.minY + inputHeight + 20
+                    let topY = windowFrame.maxY - headerHeight - 20
+                    var currentY = bottomY
+                    var isIncoming = true
 
-                    slices.append(CGRect(
-                        x: chatOriginX,
-                        y: windowFrame.minY + bottomOffset,
-                        width: chatWidth,
-                        height: middleHeight
-                    ))
+                    while currentY < topY - 40 {
+                        let bubbleWidth: CGFloat = min(max(chatWidth * 0.45, 180), 320)
+                        let bubbleHeight: CGFloat = 46
+                        let bubbleX = isIncoming ? (chatOriginX + 30) : (windowFrame.maxX - bubbleWidth - 30)
+
+                        slices.append(CGRect(
+                            x: bubbleX,
+                            y: currentY,
+                            width: bubbleWidth,
+                            height: bubbleHeight
+                        ))
+
+                        currentY += bubbleHeight + 16
+                        isIncoming.toggle()
+                    }
                 }
             }
 

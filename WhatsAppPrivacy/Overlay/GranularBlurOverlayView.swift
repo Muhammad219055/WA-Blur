@@ -23,8 +23,6 @@ struct GranularBlurOverlayView: View {
                 let localYFromBottom = slice.minY - windowFrame.minY
                 let localYFromTop = windowFrame.height - localYFromBottom - slice.height
 
-                let isDiscreteCard = slice.width < windowFrame.width * 0.9 && slice.height < windowFrame.height * 0.85
-
                 Group {
                     switch settings.renderStyle {
                     case .blur:
@@ -34,11 +32,23 @@ struct GranularBlurOverlayView: View {
                     }
                 }
                 .frame(width: slice.width, height: slice.height)
-                .clipShape(RoundedRectangle(cornerRadius: isDiscreteCard ? 10 : 0, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius(for: slice), style: .continuous))
                 .offset(x: localX, y: localYFromTop)
             }
         }
         .frame(width: windowFrame.width, height: windowFrame.height)
         .clipped()
+    }
+
+    private func cornerRadius(for slice: CGRect) -> CGFloat {
+        if slice.width == 48 && slice.height == 48 {
+            return 24 // circular avatar
+        } else if slice.height <= 24 {
+            return 6 // pill for name / message preview
+        } else if slice.width < windowFrame.width * 0.85 && slice.height < windowFrame.height * 0.85 {
+            return 12 // rounded message bubble / card
+        } else {
+            return 0
+        }
     }
 }
