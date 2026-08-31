@@ -2,7 +2,13 @@ import AppKit
 import SwiftUI
 
 final class PrivacyOverlayWindow: NSWindow {
-    init(frame: CGRect, settings: PrivacySettings, revealTracker: OverlayRevealTracker, sidebarWidth: CGFloat? = nil) {
+    init(
+        frame: CGRect,
+        settings: PrivacySettings,
+        revealTracker: OverlayRevealTracker,
+        sidebarWidth: CGFloat? = nil,
+        scannedElements: WhatsAppScannedElements? = nil
+    ) {
         super.init(
             contentRect: frame,
             styleMask: [.borderless],
@@ -54,16 +60,24 @@ final class PrivacyOverlayWindow: NSWindow {
             settings: settings,
             revealTracker: revealTracker,
             windowFrame: frame,
-            sidebarWidth: sidebarWidth
+            sidebarWidth: sidebarWidth,
+            scannedElements: scannedElements
         ))
     }
 
-    func updateContent(frame: CGRect, settings: PrivacySettings, revealTracker: OverlayRevealTracker, sidebarWidth: CGFloat?) {
+    func updateContent(
+        frame: CGRect,
+        settings: PrivacySettings,
+        revealTracker: OverlayRevealTracker,
+        sidebarWidth: CGFloat?,
+        scannedElements: WhatsAppScannedElements? = nil
+    ) {
         contentView = NSHostingView(rootView: PrivacyContentRouter(
             settings: settings,
             revealTracker: revealTracker,
             windowFrame: frame,
-            sidebarWidth: sidebarWidth
+            sidebarWidth: sidebarWidth,
+            scannedElements: scannedElements
         ))
     }
 }

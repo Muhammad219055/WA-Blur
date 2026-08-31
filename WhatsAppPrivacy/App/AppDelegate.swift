@@ -253,6 +253,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let detectedSidebarWidth = currentWhatsAppPID.flatMap(WhatsAppSplitDetector.detectSidebarWidth)
-        overlayManager.showOverlay(at: frame, sidebarWidth: detectedSidebarWidth)
+        let scannedElements = currentWhatsAppPID.map { WhatsAppElementScanner.scanElements(forProcessIdentifier: $0, windowCocoaFrame: frame) }
+        overlayManager.showOverlay(at: frame, sidebarWidth: detectedSidebarWidth, scannedElements: scannedElements)
     }
 }

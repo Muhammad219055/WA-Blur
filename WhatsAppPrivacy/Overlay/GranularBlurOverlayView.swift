@@ -5,12 +5,14 @@ struct GranularBlurOverlayView: View {
     @ObservedObject var settings: PrivacySettings
     let windowFrame: CGRect
     let sidebarWidth: CGFloat?
+    var scannedElements: WhatsAppScannedElements? = nil
 
     var body: some View {
         let slices = PrivacyRegionCalculator.granularSlices(
             for: windowFrame,
             options: settings.filterOptions,
-            sidebarWidth: sidebarWidth
+            sidebarWidth: sidebarWidth,
+            scannedElements: scannedElements
         )
 
         ZStack(alignment: .topLeading) {
@@ -21,6 +23,8 @@ struct GranularBlurOverlayView: View {
                 let localYFromBottom = slice.minY - windowFrame.minY
                 let localYFromTop = windowFrame.height - localYFromBottom - slice.height
 
+                let isDiscreteCard = slice.width < windowFrame.width * 0.9 && slice.height < windowFrame.height * 0.85
+
                 Group {
                     switch settings.renderStyle {
                     case .blur:
@@ -30,6 +34,7 @@ struct GranularBlurOverlayView: View {
                     }
                 }
                 .frame(width: slice.width, height: slice.height)
+                .clipShape(RoundedRectangle(cornerRadius: isDiscreteCard ? 10 : 0, style: .continuous))
                 .offset(x: localX, y: localYFromTop)
             }
         }

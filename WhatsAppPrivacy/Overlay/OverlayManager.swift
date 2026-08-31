@@ -17,7 +17,11 @@ final class OverlayManager {
     /// this window pinned to the Space it was created on. `ignoresMouseEvents`
     /// is already true, so an alpha-0 window still doesn't intercept clicks;
     /// it just isn't visible.
-    func showOverlay(at windowFrame: CGRect, sidebarWidth: CGFloat? = nil) {
+    func showOverlay(
+        at windowFrame: CGRect,
+        sidebarWidth: CGFloat? = nil,
+        scannedElements: WhatsAppScannedElements? = nil
+    ) {
         if let window {
             if window.frame != windowFrame {
                 window.setFrame(windowFrame, display: true)
@@ -26,7 +30,8 @@ final class OverlayManager {
                 frame: windowFrame,
                 settings: settings,
                 revealTracker: revealTracker,
-                sidebarWidth: sidebarWidth
+                sidebarWidth: sidebarWidth,
+                scannedElements: scannedElements
             )
             window.alphaValue = 1
         } else {
@@ -34,7 +39,8 @@ final class OverlayManager {
                 frame: windowFrame,
                 settings: settings,
                 revealTracker: revealTracker,
-                sidebarWidth: sidebarWidth
+                sidebarWidth: sidebarWidth,
+                scannedElements: scannedElements
             )
             newWindow.orderFrontRegardless()
             newWindow.alphaValue = 1
