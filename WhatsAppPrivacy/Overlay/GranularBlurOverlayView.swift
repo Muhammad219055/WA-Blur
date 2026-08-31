@@ -13,13 +13,13 @@ struct GranularBlurOverlayView: View {
             sidebarWidth: sidebarWidth
         )
 
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .topLeading) {
             Color.clear
 
             ForEach(Array(slices.enumerated()), id: \.offset) { _, slice in
-                // Convert Cocoa global screen slice coordinates to local view coordinates
                 let localX = slice.minX - windowFrame.minX
-                let localY = slice.minY - windowFrame.minY
+                let localYFromBottom = slice.minY - windowFrame.minY
+                let localYFromTop = windowFrame.height - localYFromBottom - slice.height
 
                 Group {
                     switch settings.renderStyle {
@@ -30,9 +30,10 @@ struct GranularBlurOverlayView: View {
                     }
                 }
                 .frame(width: slice.width, height: slice.height)
-                .position(x: localX + slice.width / 2, y: windowFrame.height - (localY + slice.height / 2))
+                .offset(x: localX, y: localYFromTop)
             }
         }
         .frame(width: windowFrame.width, height: windowFrame.height)
+        .clipped()
     }
 }

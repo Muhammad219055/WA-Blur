@@ -8,9 +8,6 @@ struct BlurOverlayView: View {
         ZStack {
             VisualEffectBackground()
             Color.black.opacity(intensity.overlayOpacity)
-            Text("PRIVACY ON")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
         }
     }
 }

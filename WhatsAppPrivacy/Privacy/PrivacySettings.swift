@@ -19,14 +19,15 @@ final class PrivacySettings: ObservableObject {
     @Published var regionScope: PrivacyRegionScope {
         didSet {
             defaults.set(regionScope.rawValue, forKey: Self.regionScopeKey)
-            // Sync filterOptions to match the selected region preset
             switch regionScope {
             case .fullWindow:
-                filterOptions = .everything
+                if filterOptions != .everything { filterOptions = .everything }
             case .sidebarOnly:
-                filterOptions = .chatListOnly
+                if filterOptions != .chatListOnly { filterOptions = .chatListOnly }
             case .chatOnly:
-                filterOptions = .conversationOnly
+                if filterOptions != .conversationOnly { filterOptions = .conversationOnly }
+            case .custom:
+                break
             }
         }
     }
@@ -39,6 +40,19 @@ final class PrivacySettings: ObservableObject {
         didSet {
             if let data = try? JSONEncoder().encode(filterOptions) {
                 defaults.set(data, forKey: Self.filterOptionsKey)
+            }
+            let matchingScope: PrivacyRegionScope
+            if filterOptions == .everything {
+                matchingScope = .fullWindow
+            } else if filterOptions == .chatListOnly {
+                matchingScope = .sidebarOnly
+            } else if filterOptions == .conversationOnly {
+                matchingScope = .chatOnly
+            } else {
+                matchingScope = .custom
+            }
+            if regionScope != matchingScope {
+                regionScope = matchingScope
             }
         }
     }
@@ -65,6 +79,7 @@ final class PrivacySettings: ObservableObject {
             case .fullWindow: self.filterOptions = .everything
             case .sidebarOnly: self.filterOptions = .chatListOnly
             case .chatOnly: self.filterOptions = .conversationOnly
+            case .custom: self.filterOptions = .everything
             }
         }
     }

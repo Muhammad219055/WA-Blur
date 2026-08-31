@@ -34,6 +34,9 @@ enum PrivacyRegionCalculator {
                 width: chatWidth,
                 height: windowFrame.height
             )
+
+        case .custom:
+            return windowFrame
         }
     }
 
