@@ -33,6 +33,16 @@ final class ScreenRecordingPermissionManager: ObservableObject {
     func requestAccess() {
         _ = CGRequestScreenCaptureAccess()
         refresh()
+        if !isAuthorized {
+            openSettings()
+        }
+    }
+
+    func openSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     private func refresh() {

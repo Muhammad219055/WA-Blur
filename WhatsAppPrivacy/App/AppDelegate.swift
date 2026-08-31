@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindAppActivation()
         bindSpaceChanges()
         bindPrivacyStyle()
+        bindScreenRecordingPermission()
 
         accessibilityManager.startMonitoringTrustState()
         screenRecordingPermission.startMonitoring()
@@ -143,6 +144,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 } else {
                     self.windowCapture.stopCapture()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// When Screen Recording permission transitions to authorized while the
+    /// user has Pixelate selected, start the capture pipeline immediately.
+    private func bindScreenRecordingPermission() {
+        screenRecordingPermission.$isAuthorized
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isAuthorized in
+                guard let self else { return }
+                if isAuthorized && self.privacySettings.renderStyle == .pixelate {
+                    if let pid = self.currentWhatsAppPID {
+                        Task { await self.windowCapture.startCapture(forProcessIdentifier: pid) }
+                    }
                 }
             }
             .store(in: &cancellables)

@@ -12,8 +12,13 @@ final class WhatsAppWindowCapture: NSObject, ObservableObject {
     func startCapture(forProcessIdentifier pid: pid_t) async {
         stopCapture()
         do {
-            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            guard let scWindow = content.windows.first(where: { $0.owningApplication?.processID == pid }) else {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            let matchingWindows = content.windows.filter {
+                $0.owningApplication?.processID == pid && $0.frame.width > 100 && $0.frame.height > 100
+            }
+            guard let scWindow = matchingWindows.max(by: {
+                ($0.frame.width * $0.frame.height) < ($1.frame.width * $1.frame.height)
+            }) ?? content.windows.first(where: { $0.owningApplication?.processID == pid }) else {
                 return
             }
 
