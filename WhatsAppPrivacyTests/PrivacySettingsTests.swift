@@ -66,6 +66,21 @@ final class PrivacySettingsTests: XCTestCase {
         XCTAssertEqual(second.revealMode, .hoverPeek)
     }
 
+    @MainActor
+    func test_filterOptions_defaultsAndPersistence() {
+        let first = PrivacySettings(defaults: defaults)
+        XCTAssertTrue(first.filterOptions.blurChatNames)
+        XCTAssertTrue(first.filterOptions.blurConversationMessages)
+
+        first.filterOptions.blurChatNames = false
+        first.filterOptions.blurConversationMedia = false
+
+        let second = PrivacySettings(defaults: defaults)
+        XCTAssertFalse(second.filterOptions.blurChatNames)
+        XCTAssertFalse(second.filterOptions.blurConversationMedia)
+        XCTAssertTrue(second.filterOptions.blurLastMessages)
+    }
+
     func test_intensity_overlayOpacityIncreasesWithLevel() {
         XCTAssertLessThan(PrivacyIntensity.low.overlayOpacity, PrivacyIntensity.medium.overlayOpacity)
         XCTAssertLessThan(PrivacyIntensity.medium.overlayOpacity, PrivacyIntensity.high.overlayOpacity)
