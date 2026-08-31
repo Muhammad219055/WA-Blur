@@ -26,10 +26,10 @@ final class PrivacySettingsTests: XCTestCase {
     @MainActor
     func test_persistsRenderStyleAcrossInstances() {
         let first = PrivacySettings(defaults: defaults)
-        first.renderStyle = .pixelate
+        first.renderStyle = .redact
 
         let second = PrivacySettings(defaults: defaults)
-        XCTAssertEqual(second.renderStyle, .pixelate)
+        XCTAssertEqual(second.renderStyle, .redact)
     }
 
     @MainActor

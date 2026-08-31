@@ -4,12 +4,10 @@ import AppKit
 final class OverlayManager {
     private var window: PrivacyOverlayWindow?
     private let settings: PrivacySettings
-    private let capture: WhatsAppWindowCapture
     let revealTracker: OverlayRevealTracker
 
-    init(settings: PrivacySettings, capture: WhatsAppWindowCapture) {
+    init(settings: PrivacySettings) {
         self.settings = settings
-        self.capture = capture
         self.revealTracker = OverlayRevealTracker(settings: settings)
         self.revealTracker.startTracking()
     }
@@ -31,7 +29,6 @@ final class OverlayManager {
             let newWindow = PrivacyOverlayWindow(
                 frame: regionFrame,
                 settings: settings,
-                capture: capture,
                 revealTracker: revealTracker
             )
             newWindow.orderFrontRegardless()

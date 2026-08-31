@@ -9,14 +9,12 @@ import Combine
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     let privacySettings = PrivacySettings()
-    let screenRecordingPermission = ScreenRecordingPermissionManager()
     let launchAtLogin = LaunchAtLoginManager()
 
     private let accessibilityManager = AccessibilityManager()
     private lazy var windowTracker = WhatsAppWindowTracker(accessibilityManager: accessibilityManager)
     private let detector = WhatsAppDetector()
-    private lazy var windowCapture = WhatsAppWindowCapture()
-    private lazy var overlayManager = OverlayManager(settings: privacySettings, capture: windowCapture)
+    private lazy var overlayManager = OverlayManager(settings: privacySettings)
     private var hotkeyManager: GlobalHotkeyManager?
     private var currentWhatsAppPID: pid_t?
     private var activationObserver: NSObjectProtocol?
@@ -40,11 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindAppActivation()
         bindSpaceChanges()
         bindPrivacyStyle()
-        bindScreenRecordingPermission()
         bindRegionScope()
 
         accessibilityManager.startMonitoringTrustState()
-        screenRecordingPermission.startMonitoring()
         detector.startMonitoring()
 
         let hotkeyManager = GlobalHotkeyManager { [weak self] in
@@ -65,8 +61,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowTracker.stopTracking()
         detector.stopMonitoring()
         accessibilityManager.stopMonitoringTrustState()
-        screenRecordingPermission.stopMonitoring()
-        windowCapture.stopCapture()
         overlayManager.destroyOverlay()
     }
 
@@ -84,15 +78,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     // WhatsApp was detected while some other overlapping
                     // window was already frontmost.
                     self.refreshSuppression(forFrontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
-                    if self.privacySettings.renderStyle == .pixelate {
-                        let pid = runningApp.processIdentifier
-                        Task { await self.windowCapture.startCapture(forProcessIdentifier: pid) }
-                    }
                 } else {
                     self.windowTracker.stopTracking()
                     self.appState.whatsAppFrame = nil
                     self.overlaySuppressedByOverlappingWindow = false
-                    self.windowCapture.stopCapture()
                     self.overlayManager.destroyOverlay()
                 }
             }
@@ -128,41 +117,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
 
-    /// Starts/stops the ScreenCaptureKit stream to match the selected style
-    /// -- only Pixelate needs captured pixels, so Blur/Redact never pay for
-    /// a running stream. Requests Screen Recording access lazily, the first
-    /// time Pixelate is actually selected, never at launch.
     private func bindPrivacyStyle() {
         privacySettings.$renderStyle
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] style in
-                guard let self else { return }
-                if style == .pixelate {
-                    if !self.screenRecordingPermission.isAuthorized {
-                        self.screenRecordingPermission.requestAccess()
-                    }
-                    if let pid = self.currentWhatsAppPID {
-                        Task { await self.windowCapture.startCapture(forProcessIdentifier: pid) }
-                    }
-                } else {
-                    self.windowCapture.stopCapture()
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    /// When Screen Recording permission transitions to authorized while the
-    /// user has Pixelate selected, start the capture pipeline immediately.
-    private func bindScreenRecordingPermission() {
-        screenRecordingPermission.$isAuthorized
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isAuthorized in
-                guard let self else { return }
-                if isAuthorized && self.privacySettings.renderStyle == .pixelate {
-                    if let pid = self.currentWhatsAppPID {
-                        Task { await self.windowCapture.startCapture(forProcessIdentifier: pid) }
-                    }
-                }
+            .sink { [weak self] _ in
+                self?.syncOverlay()
             }
             .store(in: &cancellables)
     }

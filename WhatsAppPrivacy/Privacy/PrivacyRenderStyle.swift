@@ -1,12 +1,10 @@
-enum PrivacyRenderStyle: String, CaseIterable {
+enum PrivacyRenderStyle: String, CaseIterable, Sendable {
     case blur
-    case pixelate
     case redact
 
     var menuTitle: String {
         switch self {
         case .blur: return "Blur"
-        case .pixelate: return "Pixelate"
         case .redact: return "Redact"
         }
     }
